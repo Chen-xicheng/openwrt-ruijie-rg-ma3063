@@ -5,12 +5,10 @@ AX3000 router based on the Qualcomm IPQ5018 SoC. This project tracks the
 bring-up effort: device tree, image build configuration, boot research, TTL
 flashing procedure and on-device bring-up verification.
 
-> **STATUS: DEVELOPMENT — bring-up pending.** The hardware has not yet been
-> verified on the bench. Everything here is based on documented U-Boot logs and
-> the reference design of the sibling devices (CMCC MR3000D-CI / CMCC PZ-L8),
-> which use the same SoC/switch/radio platform. See
-> [docs/05-bringup-checklist.md](docs/05-bringup-checklist.md).
-
+> **STATUS: DEVELOPMENT — Fully Stable.** 
+> All function tested
+> Wifi 2.4Ghz and 5Ghz both can running
+> Ethernet is UP
 ## ⚠️ Read this first — flash variants
 
 The RG-MA3063 was shipped with (at least) three different SPI-NAND chips:
