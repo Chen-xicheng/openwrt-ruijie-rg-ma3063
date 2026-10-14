@@ -25,24 +25,7 @@ Before flashing anything: watch the first U-Boot line mentioning
 `Serial NAND device Manufacturer:` — if it is **not** a supported vendor,
 stop. See [docs/01-hardware-and-research.md](docs/01-hardware-and-research.md).
 
-## What's in this repo
 
-```
-├── README.md                 <- you are here
-├── LICENSE
-├── bin/
-│   └── openwrt-...factory.ubi  <- pre-built image (UNVERIFIED, see bin/README.md)
-├── dts/
-│   └── ipq5018-rg-ma3063.dts   <- the device tree (also inside the patch)
-├── patches/
-│   └── 0001-qualcommax-ipq50xx-add-ruijie-rg-ma3063.patch
-└── docs/
-    ├── 01-hardware-and-research.md   <- verified hardware facts + flash variant warning
-    ├── 02-uboot-reference.md         <- annotated U-Boot boot log + partition table
-    ├── 03-build-instructions.md      <- how to build the image
-    ├── 04-ttl-flash.md               <- TTL U-Boot flashing procedure
-    ├── 05-bringup-checklist.md       <- what needs on-device verification
-    └── 06-ipq-wifi-bdf.md            <- how the Wi-Fi BDF will be extracted
 ```
 
 ## The changes (patch summary)
