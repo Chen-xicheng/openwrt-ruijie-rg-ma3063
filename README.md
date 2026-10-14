@@ -1,108 +1,96 @@
-![OpenWrt logo](include/logo.png)
+# OpenWrt support for the Ruijie RG-MA3063 (IPQ5018)
 
-OpenWrt Project is a Linux operating system targeting embedded devices. Instead
-of trying to create a single, static firmware, OpenWrt provides a fully
-writable filesystem with package management. This frees you from the
-application selection and configuration provided by the vendor and allows you
-to customize the device through the use of packages to suit any application.
-For developers, OpenWrt is the framework to build an application without having
-to build a complete firmware around it; for users this means the ability for
-full customization, to use the device in ways never envisioned.
+OpenWrt (Qualcommax / ipq50xx) support for the **Ruijie RG-MA3063** — a dual-band
+AX3000 router based on the Qualcomm IPQ5018 SoC. This project tracks the
+bring-up effort: device tree, image build configuration, boot research, TTL
+flashing procedure and on-device bring-up verification.
 
-Sunshine!
+> **STATUS: DEVELOPMENT — bring-up pending.** The hardware has not yet been
+> verified on the bench. Everything here is based on documented U-Boot logs and
+> the reference design of the sibling devices (CMCC MR3000D-CI / CMCC PZ-L8),
+> which use the same SoC/switch/radio platform. See
+> [docs/05-bringup-checklist.md](docs/05-bringup-checklist.md).
 
-## Download
+## ⚠️ Read this first — flash variants
 
-Built firmware images are available for many architectures and come with a
-package selection to be used as WiFi home router. To quickly find a factory
-image usable to migrate from a vendor stock firmware to OpenWrt, try the
-*Firmware Selector*.
+The RG-MA3063 was shipped with (at least) three different SPI-NAND chips:
 
-* [OpenWrt Firmware Selector](https://firmware-selector.openwrt.org/)
+| Flash | Status |
+|---|---|
+| Macronix MX35UF1GE4AC (ID `c2 92`) | OK — this is what the referenced U-Boot log shows |
+| Winbond W25N01GWZEIG | Likely OK |
+| **Fudan Micro (复旦微)** | **DO NOT FLASH.** Community reports: units with Fudan Micro flash fail to flash custom firmware, boot-loop and can brick (`复旦微的闪存勿刷`) |
 
-If your device is supported, please follow the **Info** link to see install
-instructions or consult the support resources listed below.
+Before flashing anything: watch the first U-Boot line mentioning
+`Serial NAND device Manufacturer:` — if it is **not** a supported vendor,
+stop. See [docs/01-hardware-and-research.md](docs/01-hardware-and-research.md).
 
-##
-
-An advanced user may require additional or specific package. (Toolchain, SDK, ...) For everything else than simple firmware download, try the wiki download page:
-
-* [OpenWrt Wiki Download](https://openwrt.org/downloads)
-
-## Development
-
-To build your own firmware you need a GNU/Linux, BSD or macOS system (case
-sensitive filesystem required). Cygwin is unsupported because of the lack of a
-case sensitive file system.
-
-### Requirements
-
-You need the following tools to compile OpenWrt, the package names vary between
-distributions. A complete list with distribution specific packages is found in
-the [Build System Setup](https://openwrt.org/docs/guide-developer/build-system/install-buildsystem)
-documentation.
+## What's in this repo
 
 ```
-binutils bzip2 diff find flex gawk gcc-6+ getopt grep install libc-dev libz-dev
-make4.1+ perl python3.8+ rsync subversion unzip which
+├── README.md                 <- you are here
+├── LICENSE
+├── bin/
+│   └── openwrt-...factory.ubi  <- pre-built image (UNVERIFIED, see bin/README.md)
+├── dts/
+│   └── ipq5018-rg-ma3063.dts   <- the device tree (also inside the patch)
+├── patches/
+│   └── 0001-qualcommax-ipq50xx-add-ruijie-rg-ma3063.patch
+└── docs/
+    ├── 01-hardware-and-research.md   <- verified hardware facts + flash variant warning
+    ├── 02-uboot-reference.md         <- annotated U-Boot boot log + partition table
+    ├── 03-build-instructions.md      <- how to build the image
+    ├── 04-ttl-flash.md               <- TTL U-Boot flashing procedure
+    ├── 05-bringup-checklist.md       <- what needs on-device verification
+    └── 06-ipq-wifi-bdf.md            <- how the Wi-Fi BDF will be extracted
 ```
 
-### Quickstart
+## The changes (patch summary)
 
-1. Run `./scripts/feeds update -a` to obtain all the latest package definitions
-   defined in feeds.conf / feeds.conf.default
+The single patch adds one device to the Qualcommax `ipq50xx` subtarget:
 
-2. Run `./scripts/feeds install -a` to install symlinks for all obtained
-   packages into package/feeds/
+1. `target/linux/qualcommax/dts/ipq5018-rg-ma3063.dts` — device tree
+   (model `ruijie,rg-ma3063`, serial console `blsp1_uart1`, QCA8337 switch
+   with 3x LAN + 1x WAN, IPQ5018 2.4G + QCN6102 5G radios, ART nvmem MACs).
+2. `target/linux/qualcommax/image/ipq50xx.mk` — `Device/ruijie_rg-ma3063`
+   entry: `UbiFit`, 128k blocksize, 2048 page, 51200k rootfs image, NAND 128m.
+3. `target/linux/qualcommax/ipq50xx/base-files/etc/hotplug.d/firmware/11-ath11k-caldata`
+   — calibration extraction case for `ruijie,rg-ma3063` (mirrors the sibling
+   `cmcc,mr3000d-ci`).
 
-3. Run `make menuconfig` to select your preferred configuration for the
-   toolchain, target system & firmware packages.
+Apply it against `openwrt/openwrt` at commit
+`486b4a4b3ede480635a185234fc624c969426f13` (2026-08-09):
 
-4. Run `make` to build your firmware. This will download all sources, build the
-   cross-compile toolchain and then cross-compile the GNU/Linux kernel & all chosen
-   applications for your target system.
+```sh
+git -C openwrt apply patches/0001-qualcommax-ipq50xx-add-ruijie-rg-ma3063.patch
+```
 
-### Related Repositories
+See [docs/03-build-instructions.md](docs/03-build-instructions.md) for the full
+build, and [docs/04-ttl-flash.md](docs/04-ttl-flash.md) for flashing.
 
-The main repository uses multiple sub-repositories to manage packages of
-different categories. All packages are installed via the OpenWrt package
-manager called `opkg`. If you're looking to develop the web interface or port
-packages to OpenWrt, please find the fitting repository below.
+## Why ipq50xx
 
-* [LuCI Web Interface](https://github.com/openwrt/luci): Modern and modular
-  interface to control the device via a web browser.
+* SoC: Qualcomm **IPQ5018** (dual-core A53, 256MB RAM)
+* Wi-Fi: IPQ5018 internal **2.4 GHz** + **QCN6102** 5 GHz over PCIe
+  (same radio family as the sibling devices, so the `ipq5018-qcn6122.dtsi`
+  blob applies)
+* Switch: **QCA8337** (QCA8337-AL3C) — 4 GbE user ports (1 WAN + 3 LAN)
+* Storage: 128MB SPI-NAND in two rootfs slots (`rootfs` + `rootfs_1`),
+  flashed via U-Boot TTL
 
-* [OpenWrt Packages](https://github.com/openwrt/packages): Community repository
-  of ported packages.
+## Related
 
-* [OpenWrt Routing](https://github.com/openwrt/routing): Packages specifically
-  focused on (mesh) routing.
-
-* [OpenWrt Video](https://github.com/openwrt/video): Packages specifically
-  focused on display servers and clients (Xorg and Wayland).
-
-## Support Information
-
-For a list of supported devices see the [OpenWrt Hardware Database](https://openwrt.org/supported_devices)
-
-### Documentation
-
-* [Quick Start Guide](https://openwrt.org/docs/guide-quick-start/start)
-* [User Guide](https://openwrt.org/docs/guide-user/start)
-* [Developer Documentation](https://openwrt.org/docs/guide-developer/start)
-* [Technical Reference](https://openwrt.org/docs/techref/start)
-
-### Support Community
-
-* [Forum](https://forum.openwrt.org): For usage, projects, discussions and hardware advise.
-* [Support Chat](https://webchat.oftc.net/#openwrt): Channel `#openwrt` on **oftc.net**.
-
-### Developer Community
-
-* [Bug Reports](https://bugs.openwrt.org): Report bugs in OpenWrt
-* [Dev Mailing List](https://lists.openwrt.org/mailman/listinfo/openwrt-devel): Send patches
-* [Dev Chat](https://webchat.oftc.net/#openwrt-devel): Channel `#openwrt-devel` on **oftc.net**.
+* Reference board files in the same OpenWrt subtarget: `ipq5018-mr3000d-ci.dts`,
+  `ipq5018-pz-l8.dts`
+* acwifi teardown (Chinese): https://www.acwifi.net/21472.html
+* Community teardown / flash write-up (Chinese):
+  https://godsun.pro/blog/rui-jie-rg-ma3063.html
+* Efxn teardown of the Winbond-flash variant (Chinese):
+  https://www.efxn.net.cn/threads/锐捷-rg-ma3063-ax3000-路由器-移动定制版拆解.47/
+* SSH unlock methods (factory/developer mode): https://ioozu.com/post-3541.html
+* QSDK12 custom firmware thread with the Fudan Micro flash warning.
 
 ## License
 
-OpenWrt is licensed under GPL-2.0
+The device tree carries `GPL-2.0-or-later OR MIT` (same as the sibling files).
+Documentation is CC0 unless stated otherwise.
